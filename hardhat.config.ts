@@ -1,83 +1,86 @@
-import type { HardhatUserConfig } from "hardhat/config";
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+import "@nomiclabs/hardhat-etherscan";
+import "@typechain/hardhat";
+import "hardhat-gas-reporter";
+import "solidity-coverage";
+import "hardhat-contract-sizer";
+import { config as dotenvConfig } from "dotenv";
 
-import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
-import { configVariable } from "hardhat/config";
+dotenvConfig();
+
+const PRIVATE_KEY: string = process.env.PRIVATE_KEY || "0x" + "11".repeat(32);
+const ETHERSCAN_API_KEY: string = process.env.ETHERSCAN_API_KEY || "";
+const SEPOLIA_RPC_URL: string = process.env.SEPOLIA_RPC_URL || "";
+const MAINNET_RPC_URL: string = process.env.MAINNET_RPC_URL || "";
+const COINMARKETCAP_API_KEY: string = process.env.COINMARKETCAP_API_KEY || "";
 
 const config: HardhatUserConfig = {
-  /*
-   * In Hardhat 3, plugins are defined as part of the Hardhat config instead of
-   * being based on the side-effect of imports.
-   *
-   * Note: A `hardhat-toolbox` like plugin for Hardhat 3 hasn't been defined yet,
-   * so this list is larger than what you would normally have.
-   */
-  plugins: [hardhatToolboxMochaEthersPlugin],
   solidity: {
-    /*
-     * Hardhat 3 supports different build profiles, allowing you to configure
-     * different versions of `solc` and its settings for various use cases.
-     *
-     * Note: Using profiles is optional, and any Hardhat 2 `solidity` config
-     * is still valid in Hardhat 3.
-     */
-    profiles: {
-      /*
-       * The default profile is used when no profile is defined or specified
-       * in the CLI or by the tasks you are running.
-       */
-      default: {
-        version: "0.8.28",
+    version: "0.8.19",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
       },
-      /*
-       * The production profile is meant to be used for deployments, providing
-       * more control over settings for production builds and taking some extra
-       * steps to simplify the process of verifying your contracts.
-       */
-      production: {
-        version: "0.8.28",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
-        },
-      },
+      viaIR: true,
     },
   },
-  /*
-   * The `networks` configuration is mostly compatible with Hardhat 2.
-   * The key differences right now are:
-   *
-   * - You must set a `type` for each network, which is either `http` or `edr`,
-   *   allowing you to have multiple simulated networks.
-   *
-   * - You can set a `chainType` for each network, which is either `generic`,
-   *   `l1`, or `op`. This has two uses. It ensures that you always
-   *   connect to the network with the right Chain Type. And, on `edr`
-   *   networks, it makes sure that the simulated chain behaves exactly like the
-   *   real one. More information about this can be found in the test files.
-   *
-   * - The `accounts` field of `http` networks can also receive Configuration
-   *   Variables, which are values that only get loaded when needed. This allows
-   *   Hardhat to still run despite some of its config not being available
-   *   (e.g., a missing private key or API key). More info about this can be
-   *   found in the "Sending a Transaction to Optimism Sepolia" of the README.
-   */
   networks: {
-    hardhatMainnet: {
-      type: "edr-simulated",
-      chainType: "l1",
+    hardhat: {
+      chainId: 31337,
+      gas: 12000000,
+      blockGasLimit: 12000000,
+      allowUnlimitedContractSize: true,
     },
-    hardhatOp: {
-      type: "edr-simulated",
-      chainType: "op",
+    localhost: {
+      chainId: 31337,
+      url: "http://127.0.0.1:8545",
     },
     sepolia: {
-      type: "http",
-      chainType: "l1",
-      url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      chainId: 11155111,
+      url: SEPOLIA_RPC_URL,
+      accounts: PRIVATE_KEY !== "0x" + "11".repeat(32) ? [PRIVATE_KEY] : [],
+      gas: 6000000,
+      gasPrice: 20000000000, // 20 gwei
     },
+    ethereum: {
+      chainId: 1,
+      url: MAINNET_RPC_URL,
+      accounts: PRIVATE_KEY !== "0x" + "11".repeat(32) ? [PRIVATE_KEY] : [],
+      gas: 6000000,
+      gasPrice: 20000000000,
+    },
+  },
+  etherscan: {
+    apiKey: ETHERSCAN_API_KEY,
+  },
+  gasReporter: {
+    enabled: process.env.REPORT_GAS !== undefined,
+    currency: "USD",
+    gasPrice: 20,
+    coinmarketcap: COINMARKETCAP_API_KEY,
+  },
+  contractSizer: {
+    alphaSort: true,
+    disambiguatePaths: false,
+    runOnCompile: true,
+    strict: true,
+  },
+  typechain: {
+    outDir: "typechain-types",
+    target: "ethers-v5",
+    alwaysGenerateOverloads: false,
+    externalArtifacts: ["externalArtifacts/*.json"],
+  },
+  mocha: {
+    timeout: 200000, // 200 seconds
+  },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts",
   },
 };
 
